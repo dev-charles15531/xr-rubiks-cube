@@ -1,5 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import { Cube } from "./cube";
+import { Animation } from "../features/animation";
 
 // CubeGrid to manage the whole Rubik's Cube
 export class CubeGrid {
@@ -22,11 +23,16 @@ export class CubeGrid {
   constructor(scene: BABYLON.Scene) {
     // Initialize the root node for the cube
     this.cubeNode = new BABYLON.TransformNode("cube");
+
     // Initialize the node for rotating sides
     this.sideNode = new BABYLON.TransformNode("rotating");
     this.sideNode.position.copyFrom(BABYLON.Vector3.Zero());
     this.sideNode.rotationQuaternion = BABYLON.Quaternion.Identity();
     this.sideNode.parent = this.cubeNode;
+
+    // setup animation
+    const animation = new Animation();
+    animation.buildSideNodeAnimation(this.sideNode);
 
     // Store the scene and initialize cubes
     this.scene = scene;
@@ -55,6 +61,19 @@ export class CubeGrid {
 
           cubes.push(c);
         }
+
+    // rotate the larger cube to test rotation is independent of larger cube pos/rot.
+    this.cubeNode.rotation = new BABYLON.Vector3(Math.PI / 10, Math.PI / 10, Math.PI / 22);
+    
+  }
+
+  /**
+   * Returns the TransformNode of the side of the cube that can be rotated.
+   * 
+   * @returns {BABYLON.TransformNode} The TransformNode of the side of the cube.
+   */
+  public getSideNode(): BABYLON.TransformNode {
+    return this.sideNode;
   }
 
   /**
@@ -87,11 +106,12 @@ export class CubeGrid {
     axis: BABYLON.DeepImmutableObject<BABYLON.Vector3>,
     amount: number
   ) {
+    
     // Set the position of the sideNode to the rotation axis
     this.sideNode.position.copyFrom(axis);
 
     // Select and group meshes on the chosen side
-    const side = Array.from(
+    var side = Array.from(
       this.sideNode.parent!.getChildMeshes(true).filter(choosingFunction)
     );
     side.forEach((c) => c.setParent(this.sideNode));
@@ -104,7 +124,7 @@ export class CubeGrid {
 
     // Begin the animation and bind the cleanup method
     this.scene.beginAnimation(
-      this,
+      this.sideNode,
       0,
       key.frame,
       false,
