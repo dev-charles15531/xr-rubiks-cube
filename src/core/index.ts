@@ -7,7 +7,7 @@ function createRubiksCubeSimulation() {
   sceneSetup.setupCameraAndLight();
 
   const cubeGrid = new CubeGrid(sceneSetup.scene);
-  
+
   // Start rendering the scene
   sceneSetup.run();
 }
