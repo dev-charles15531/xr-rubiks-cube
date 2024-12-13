@@ -7,7 +7,10 @@ export class SceneSetup {
 
   constructor(canvasId: string) {
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+    
     this.engine = new BABYLON.Engine(this.canvas, true);
+    this.engine.setHardwareScalingLevel( .5)
+
     this.scene = new BABYLON.Scene(this.engine);
   }
 

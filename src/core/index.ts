@@ -10,7 +10,7 @@ function createRubiksCubeSimulation() {
   const cubeGrid = new CubeGrid(sceneSetup.scene);
 
   // initialize input manager
-  const inputManager = new InputManager(cubeGrid);
+  const inputManager = new InputManager(sceneSetup.scene, cubeGrid);
   inputManager.init();
 
   // Start rendering the scene

@@ -63,7 +63,8 @@ export class CubeGrid {
         }
 
     // rotate the larger cube to test rotation is independent of larger cube pos/rot.
-    this.cubeNode.rotation = new BABYLON.Vector3(Math.PI / 10, Math.PI / 10, Math.PI / 22);
+    // this.cubeNode.rotation = new BABYLON.Vector3(Math.PI / 10, Math.PI / 10, Math.PI / 22);
+    this.cubeNode.rotation = new BABYLON.Vector3(Math.PI/4,Math.PI/4,0)
     
   }
 

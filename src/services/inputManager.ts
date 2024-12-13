@@ -1,29 +1,29 @@
+import * as BABYLON from "@babylonjs/core";
 import { CubeGrid } from '../core/cubeGrid';
 import { KeyboardService } from './keyboardService';
+import { PointerService } from './pointerService';
 
 export class InputManager {
   private keyboardService: KeyboardService;
-  private activeService: string;
+  private pointerService: PointerService;
+  private activeService: string | string[];
 
-  constructor(cubeGrid: CubeGrid) {
+  constructor(scene: BABYLON.Scene, cubeGrid: CubeGrid) {
     this.keyboardService = new KeyboardService(cubeGrid);
+    this.pointerService = new PointerService(scene, cubeGrid);
     this.activeService = 'keyboard';  // Default 
   }
 
   // Initialize the input
   public init() {
-   if (this.isKeyboardInput()) {
+    if (this.isKeyboardInput()) {
       this.activeService = 'keyboard';
       this.keyboardService.init();
     } 
-  }
 
-  // Dispose of all active services when done
-  public dispose() {
-    switch (this.activeService) {
-      case 'keyboard':
-        this.keyboardService.dispose();
-        break;
+    if(typeof this.activeService === 'string') {
+      this.activeService = [this.activeService, 'pointer'];
+      this.pointerService.init();
     }
   }
 
