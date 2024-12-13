@@ -1,6 +1,6 @@
-import { InputManager } from "../services/inputManager";
-import { CubeGrid } from "./cubeGrid";
-import { SceneSetup } from "./sceneSetup";
+import { InputManager } from "./services/inputManager";
+import { CubeGrid } from "./core/cubeGrid";
+import { SceneSetup } from "./core/sceneSetup";
 
 // Main function to start the Rubik's Cube simulation
 function createRubiksCubeSimulation() {
