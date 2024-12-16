@@ -1,6 +1,7 @@
 import { InputManager } from "./services/inputManager";
 import { CubeGrid } from "./core/cubeGrid";
 import { SceneSetup } from "./core/sceneSetup";
+import { SceneGUI } from "./gui/sceneGUI";
 
 // Main function to start the Rubik's Cube simulation
 function createRubiksCubeSimulation() {
@@ -12,6 +13,9 @@ function createRubiksCubeSimulation() {
   // initialize input manager
   const inputManager = new InputManager(sceneSetup.scene, cubeGrid);
   inputManager.init();
+
+  // init GUI
+  const gui = new SceneGUI(sceneSetup.scene);
 
   // Start rendering the scene
   sceneSetup.run();

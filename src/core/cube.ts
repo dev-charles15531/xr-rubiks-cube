@@ -100,7 +100,7 @@ export class Cube {
       redMaterial,    // Left face
       orangeMaterial, // Right face
       whiteMaterial,  // Top face
-      yellowMaterial  // Bottom face
+      yellowMaterial,  // Bottom face
     ];
 
     return multiMaterial;
