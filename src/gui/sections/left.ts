@@ -7,6 +7,7 @@ import {
 } from "@babylonjs/gui";
 import { UIPanel } from "../PanelComponent";
 import { CubeGrid } from "../../core/cubeGrid";
+import paperTexture from "./../../../assets/textures/paper.jpg";
 
 /**
  * Creates the left section of the control panel.
@@ -89,7 +90,7 @@ function createCtrlKeysButton(name: string, label: string): Button {
   let button = Button.CreateImageWithCenterTextButton(
     name,
     label,
-    "../../../assets/textures/paper.jpg"
+    paperTexture
   );
   button.width = "90px";
   button.height = "90px";
