@@ -15,7 +15,7 @@ function createRubiksCubeSimulation() {
   inputManager.init();
 
   // init GUI
-  const gui = new SceneGUI(sceneSetup.scene);
+  const gui = new SceneGUI(sceneSetup.scene, cubeGrid);
 
   // Start rendering the scene
   sceneSetup.run();

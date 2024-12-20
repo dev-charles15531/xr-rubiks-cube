@@ -97,8 +97,8 @@ export class Cube {
     multiMaterial.subMaterials = [
       blueMaterial,   // Front face
       greenMaterial,  // Back face
-      redMaterial,    // Left face
       orangeMaterial, // Right face
+      redMaterial,    // Left face
       whiteMaterial,  // Top face
       yellowMaterial,  // Bottom face
     ];

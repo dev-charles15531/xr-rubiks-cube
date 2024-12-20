@@ -2,18 +2,25 @@ import { Scene } from "@babylonjs/core/scene";
 import { UIPanel } from "./PanelComponent";
 import { AdvancedDynamicTexture, Control, Rectangle } from "@babylonjs/gui";
 import { leftSection } from "./sections/left";
+import { CubeGrid } from "../core/cubeGrid";
 
 export class SceneGUI {
   private scene: Scene;
   private advancedTexture: AdvancedDynamicTexture;
   private panel: UIPanel;
+  private cubeGrid: CubeGrid;
 
-  constructor(scene: Scene) {
+  constructor(scene: Scene, cubeGrid: CubeGrid) {
     this.scene = scene;
-    this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI", false, this.scene);
+    this.cubeGrid = cubeGrid;
+    this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI(
+      "UI",
+      false,
+      this.scene
+    );
 
-    const rectangularPanel = new Rectangle('rect');
-    rectangularPanel.width = "600px"; // Set the width of the control board
+    const rectangularPanel = new Rectangle("rect");
+    rectangularPanel.width = "500px"; // Set the width of the control board
     rectangularPanel.height = "60%"; // Set the height of the control board
     rectangularPanel.color = "gray"; // Set the border color
     rectangularPanel.thickness = 3; // Set the border thickness
@@ -29,7 +36,11 @@ export class SceneGUI {
   }
 
   private createUI(): void {
-    const leftPane = leftSection(this.scene);
+    const leftPane = leftSection(
+      this.scene,
+      this.cubeGrid,
+      this.advancedTexture
+    );
     this.panel.addElement(leftPane);
 
     this.advancedTexture.addControl(this.panel.getControl());

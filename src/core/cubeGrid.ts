@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { Cube } from "./cube";
 import { Animation } from "../features/animation";
+import { AdvancedDynamicTexture, Grid, Rectangle } from "@babylonjs/gui";
 
 // CubeGrid to manage the whole Rubik's Cube
 export class CubeGrid {
@@ -8,7 +9,15 @@ export class CubeGrid {
   private cubeNode: BABYLON.TransformNode;
   private sideNode: BABYLON.TransformNode;
   private cubes: Cube[] = [];
-  private facePlanes: BABYLON.Mesh[] = [];
+  private panels: Record<string, Rectangle> | undefined;
+  private cubeFaces: {
+    front: string[];
+    back: string[];
+    left: string[];
+    right: string[];
+    top: string[];
+    bottom: string[];
+  };
 
   /**
    * The constructor for the CubeGrid class.
@@ -35,64 +44,6 @@ export class CubeGrid {
     // initialize cubes
     this.cubes = [];
 
-    // Create the planes to represent the 2D faces of the Rubik's Cube
-    const frontFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "frontFacePlane",
-      { size: 3 },
-      scene
-    );
-    frontFacePlane.position = new BABYLON.Vector3(0, 0, 2); 
-    frontFacePlane.rotation = new BABYLON.Vector3(0, Math.PI, 0); 
-
-    const backFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "backFacePlane",
-      { size: 3 },
-      scene
-    );
-    backFacePlane.position = new BABYLON.Vector3(0, 0, -2); 
-    backFacePlane.rotation = new BABYLON.Vector3(0, -Math.PI, 0); 
-
-    const topFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "topFacePlane",
-      { size: 3 },
-      scene
-    );
-    topFacePlane.position = new BABYLON.Vector3(0, 2, 0); 
-    topFacePlane.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0); 
-
-    const bottomFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "bottomFacePlane",
-      { size: 3 },
-      scene
-    );
-    bottomFacePlane.position = new BABYLON.Vector3(0, -2, 0); 
-    bottomFacePlane.rotation = new BABYLON.Vector3(-Math.PI / 2, 0, 0); 
-
-    const leftFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "leftFacePlane",
-      { size: 3 },
-      scene
-    );
-    leftFacePlane.position = new BABYLON.Vector3(-2, 0, 0); 
-    leftFacePlane.rotation = new BABYLON.Vector3(0, Math.PI / 2, 0); 
-
-    const rightFacePlane = BABYLON.MeshBuilder.CreatePlane(
-      "rightFacePlane",
-      { size: 3 },
-      scene
-    );
-    rightFacePlane.position = new BABYLON.Vector3(2, 0, 0); 
-    rightFacePlane.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0); 
-
-    this.facePlanes.push(
-      frontFacePlane, // front
-      backFacePlane,  // back
-      rightFacePlane,
-      leftFacePlane,  
-      topFacePlane, 
-      bottomFacePlane,
-    );
-
     // setup animation
     const animation = new Animation();
     animation.buildSideNodeAnimation(this.sideNode);
@@ -100,6 +51,15 @@ export class CubeGrid {
     // Store the scene and initialize cubes
     this.scene = scene;
     this.initializeCubes();
+
+    this.cubeFaces = {
+      front: Array(9).fill("blue"), // Blue face (default front)
+      back: Array(9).fill("green"), // Green face (default back)
+      left: Array(9).fill("orange"), // Orange face (default left)
+      right: Array(9).fill("red"), // Red face (default right)
+      top: Array(9).fill("white"), // White face (default top)
+      bottom: Array(9).fill("yellow"), // Yellow face (default bottom)
+    };
   }
 
   /**
@@ -124,13 +84,6 @@ export class CubeGrid {
 
     // rotate the larger cube to test rotation is independent of larger cube pos/rot.
     this.cubeNode.rotation = new BABYLON.Vector3(Math.PI / 4, Math.PI / 4, 0);
-
-    // Set the parent of the front face plane to the root node
-    this.facePlanes.forEach((p, idx) => {
-      p.parent = this.cubeNode; // Set the parent of the front face plane to the root node(this.cubeNode);
-
-      this.initFacePlane(p, idx);
-    });
   }
 
   /**
@@ -197,96 +150,258 @@ export class CubeGrid {
       this.sideNodeCleanup.bind(this)
     );
 
-    // Apply the colors from the Rubik's Cube to the texture
-    this.facePlanes.forEach((p, idx) => {
-      this.initFacePlane(p, idx);
+    const sideNodeAxis: BABYLON.Vector3 = this.sideNode.position;
+    const faces: Record<string, Record<string, [string, string]>> = {
+      x: {
+        "-1": ["right", "clockwise"],
+        "1": ["left", "clockwise"],
+      },
+      y: {
+        "1": ["top", "clockwise"],
+        "-1": ["bottom", "clockwise"],
+      },
+      z: {
+        "-1": ["back", "clockwise"],
+        "1": ["front", "clockwise"],
+      },
+    };
+
+    if (sideNodeAxis.x !== 0 || sideNodeAxis.y !== 0 || sideNodeAxis.z !== 0) {
+      const faceAndDirection: [string, string] =
+        sideNodeAxis.x !== 0
+          ? faces.x[sideNodeAxis.x.toString()]
+          : sideNodeAxis.y !== 0
+          ? faces.y[sideNodeAxis.y.toString()]
+          : faces.z[sideNodeAxis.z.toString()];
+
+      this.rotateFaceAndNeighbors(
+        faceAndDirection[0],
+        faceAndDirection[1] as "clockwise" | "counterclockwise"
+      );
+    }
+
+    this.updateGUI(this.panels!, this.cubeFaces);
+  }
+
+  public buildFacePanels(texture: AdvancedDynamicTexture) {
+    ["u", "d", "l", "r", "f", "b"];
+
+    this.panels = {
+      top: this.createFacePanel("top", texture),
+      bottom: this.createFacePanel("bottom", texture),
+      left: this.createFacePanel("left", texture),
+      right: this.createFacePanel("right", texture),
+      front: this.createFacePanel("front", texture),
+      back: this.createFacePanel("back", texture),
+    };
+
+    return this.panels;
+  }
+
+  /**
+   * Creates a panel for a face of the cube
+   * @param {string} name The name of the panel
+   * @param {AdvancedDynamicTexture} texture The texture that the panel should be added to
+   * @returns {Rectangle} The panel that was created
+   */
+  private createFacePanel(
+    name: string,
+    texture: AdvancedDynamicTexture
+  ): Rectangle {
+    let panel = new Rectangle(name);
+    panel.width = "100px";
+    panel.height = "100px";
+    panel.thickness = 2;
+    panel.color = "black";
+
+    texture.addControl(panel);
+
+    return panel;
+  }
+
+  /**
+   * Updates a panel for a face of the cube
+   * @param {Rectangle} panel The panel to update
+   * @param {string[]} faceColors The colors to display on the face
+   */
+  private updatePanel(panel: Rectangle, faceColors: string[]): void {
+    // Clear any existing controls in the panel
+    panel.clearControls();
+
+    // Create a 3x3 grid for the face
+    const grid = new Grid();
+    for (let i = 0; i < 3; i++) {
+      grid.addRowDefinition(1 / 3); // 3 rows
+      grid.addColumnDefinition(1 / 3); // 3 columns
+    }
+
+    // Add squares (cells) to the grid
+    faceColors.forEach((color, index) => {
+      const square = new Rectangle();
+      square.background = color; // Set the background color
+      square.thickness = 1; // Add a border
+      square.color = "black"; // Border color
+      square.width = "30px"; // Square size
+      square.height = "30px";
+
+      // Calculate row and column index
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+
+      // Add the square to the grid
+      grid.addControl(square, row, col);
+    });
+
+    // Add the grid to the panel
+    panel.addControl(grid);
+  }
+
+  /**
+   * Updates all the panels in the GUI to reflect the current state of the cube.
+   * @param {Record<string, Rectangle>} panels - The panels to update. Keys are face names (e.g. "front", "back", etc.),
+   *                                               and values are the corresponding Rectangle objects.
+   * @param {Record<string, string[]>} cubeFaces - The current state of the cube. Keys are face names, and values are
+   *                                               arrays of 9 strings representing the colors of the face.
+   */
+  public updateGUI(
+    panels: Record<string, Rectangle>,
+    cubeFaces: Record<string, string[]>
+  ): void {
+    Object.keys(panels).forEach((face) => {
+      this.updatePanel(panels[face], cubeFaces[face]);
     });
   }
 
   /**
-   * Initializes the front face plane of the Rubik's Cube with a dynamic texture.
-   *
-   * This function creates a dynamic texture and applies it to the `frontFacePlane` mesh.
-   * It extracts the colors from the smaller cubes that form the front face and fills the
-   * dynamic texture with these colors arranged in a 3x3 grid. Grid lines are drawn to
-   * delineate the individual cells. The texture is then applied to the front face plane.
-   *
-   * @param {BABYLON.Mesh} frontFacePlane - The mesh representing the front face plane.
+   * Rotates the given array of colors in either a clockwise or counterclockwise direction.
+   * @param {string[]} colors - The array of colors to rotate.
+   * @param {RotationDirection} direction - The direction to rotate the array. Supports "clockwise" and "counterclockwise".
+   * @returns {string[]} The rotated array of colors.
    */
-  private initFacePlane(frontFacePlane: BABYLON.Mesh, planeIdx: number) {
-    // Create a dynamic texture for the front face
-    const texture = new BABYLON.DynamicTexture(
-      "faceTexture",
-      { width: 512, height: 512 },
-      this.scene
-    );
-    const context = texture.getContext();
-
-    const cellSize = 512 / 3; // Divide texture width by 3 for a 3x3 grid
-    const frontFaceCubes: BABYLON.Mesh[] = [];
-
-    const posIndex = (planeIdx + 3) % 3;
-    const posValue = (planeIdx + 2) % 2 === 0 ? 1 : -1;
-
-    // Find the cubes that form the front face (i.e., where z = 1)
-    this.cubes.forEach((cube) => {
-      if (cube.position[posIndex] === posValue) {
-        // Check if it's part of the front face
-        frontFaceCubes.push(cube.mesh);
-      }
-    });
-
-    // Fill the dynamic texture with colors from the smaller cubes
-    let idx = 0; // To keep track of which cube color to copy
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const cube = frontFaceCubes[idx];
-        const multiMaterial = cube.material as BABYLON.MultiMaterial;
-
-        // Get the material for the front face of the cube (0 is typically the front)
-        const color = (
-          multiMaterial.subMaterials[planeIdx] as BABYLON.StandardMaterial
-        ).diffuseColor;
-
-        // Set the color to the texture context (draw the color for this cell)
-        context.fillStyle = color.toHexString(); // Convert color to hex string
-        context.fillRect(
-          i * cellSize,
-          j * cellSize,
-          cellSize - 1,
-          cellSize - 1
-        ); // Draw the color at the correct position
-
-        idx++;
-      }
+  private rotateColors(
+    colors: string[],
+    direction: "clockwise" | "counterclockwise"
+  ): string[] {
+    if (direction === "clockwise") {
+      return this.rotateColorsClockwise(colors);
+    } else if (direction === "counterclockwise") {
+      return this.rotateColorsCounterclockwise(colors);
+    } else {
+      throw new Error(
+        "Invalid rotation direction: Use 'clockwise' or 'counterclockwise'."
+      );
     }
-    // Draw the grid lines
-    context.strokeStyle = "#000000"; // Black color for grid lines
-    context.lineWidth = 3; // Line width for grid
-    // Vertical grid lines
-    context.beginPath();
-    context.moveTo(cellSize, 0);
-    context.lineTo(cellSize, 512);
-    context.moveTo(cellSize * 2, 0);
-    context.lineTo(cellSize * 2, 512);
-    context.stroke();
+  }
 
-    // Horizontal grid lines
-    context.beginPath();
-    context.moveTo(0, cellSize);
-    context.lineTo(512, cellSize);
-    context.moveTo(0, cellSize * 2);
-    context.lineTo(512, cellSize * 2);
-    context.stroke();
+  private rotateColorsClockwise(colors: string[]) {
+    return [
+      colors[6],
+      colors[3],
+      colors[0],
+      colors[7],
+      colors[4],
+      colors[1],
+      colors[8],
+      colors[5],
+      colors[2],
+    ];
+  }
 
-    texture.update(); // Update the texture to reflect the new color map
+  private rotateColorsCounterclockwise(colors: string[]) {
+    return [
+      colors[2],
+      colors[5],
+      colors[8],
+      colors[1],
+      colors[4],
+      colors[7],
+      colors[0],
+      colors[3],
+      colors[6],
+    ];
+  }
 
-    // Create a material for the front face and apply the texture
-    const frontFaceMaterial = new BABYLON.StandardMaterial(
-      "frontFaceMaterial",
-      this.scene
+  private rotateFaceAndNeighbors(
+    face: string,
+    direction: "clockwise" | "counterclockwise"
+  ) {
+    const neighbors = {
+      front: [
+        { face: "top", indices: [6, 7, 8] }, // Bottom row of the top face
+        { face: "right", indices: [0, 3, 6] }, // Left column of the right face
+        { face: "bottom", indices: [2, 1, 0] }, // Top row of the bottom face (reversed)
+        { face: "left", indices: [8, 5, 2] }, // Right column of the left face (reversed)
+      ],
+      back: [
+        { face: "top", indices: [2, 1, 0] }, // Top row of the top face (reversed)
+        { face: "left", indices: [0, 3, 6] }, // Left column of the left face
+        { face: "bottom", indices: [6, 7, 8] }, // Bottom row of the bottom face
+        { face: "right", indices: [8, 5, 2] }, // Right column of the right face (reversed)
+      ],
+      left: [
+        { face: "top", indices: [0, 3, 6] }, // Left column of the top face
+        { face: "front", indices: [0, 3, 6] }, // Left column of the front face
+        { face: "bottom", indices: [0, 3, 6] }, // Left column of the bottom face
+        { face: "back", indices: [8, 5, 2] }, // Right column of the back face (reversed)
+      ],
+      right: [
+        { face: "top", indices: [8, 5, 2] }, // Right column of the top face (reversed)
+        { face: "back", indices: [0, 3, 6] }, // Left column of the back face
+        { face: "bottom", indices: [8, 5, 2] }, // Right column of the bottom face
+        { face: "front", indices: [8, 5, 2] }, // Right column of the front face (reversed)
+      ],
+      top: [
+        { face: "back", indices: [2, 1, 0] }, // Top row of the back face (reversed)
+        { face: "right", indices: [2, 1, 0] }, // Top row of the right face (reversed)
+        { face: "front", indices: [2, 1, 0] }, // Top row of the front face (reversed)
+        { face: "left", indices: [2, 1, 0] }, // Top row of the left face (reversed)
+      ],
+      bottom: [
+        { face: "front", indices: [6, 7, 8] }, // Bottom row of the front face
+        { face: "right", indices: [6, 7, 8] }, // Bottom row of the right face
+        { face: "back", indices: [6, 7, 8] }, // Bottom row of the back face
+        { face: "left", indices: [6, 7, 8] }, // Bottom row of the left face
+      ],
+    };
+
+    // Rotate the face itself
+    const cubeFace = face as keyof typeof this.cubeFaces;
+    this.cubeFaces[cubeFace] = this.rotateColors(
+      this.cubeFaces[cubeFace],
+      direction
     );
-    frontFaceMaterial.diffuseTexture = texture;
-    frontFacePlane.material = frontFaceMaterial;
+
+    // Get the neighbors and strips
+    const faceNeighbors = neighbors[cubeFace];
+
+    // Store the strips of colors from adjacent faces
+    let strips = faceNeighbors.map(
+      (neighbor: { indices: any[]; face: string | number }) =>
+        neighbor.indices.map(
+          (i: number) =>
+            this.cubeFaces[neighbor.face as keyof typeof this.cubeFaces][i]
+        )
+    );
+
+    // Rotate the strips between neighbors
+    if (direction === "clockwise") {
+      strips.unshift(strips.pop() ?? []); // Shift strips clockwise
+    } else {
+      strips.push(strips.shift() ?? []); // Shift strips counterclockwise
+    }
+
+    // Update the neighbors with the rotated strips
+    faceNeighbors.forEach(
+      (neighbor: { indices: any[]; face: string | number }, i: number) => {
+        neighbor.indices.forEach((index: number, j: number) => {
+          this.cubeFaces[neighbor.face as keyof typeof this.cubeFaces][index] =
+            strips[i][j];
+        });
+      }
+    );
+  }
+
+  public getCubeFaces(): Record<string, string[]> {
+    return this.cubeFaces;
   }
 }
